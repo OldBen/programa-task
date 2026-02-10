@@ -1,11 +1,12 @@
 <?php
 
-namespace App\Entity;
+namespace App\Domain\Aggregates;
 
 use App\Repository\UserAggregateRepository;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: UserAggregateRepository::class)]
+#[ORM\Table(name: 'users')]
 class UserAggregate
 {
     #[ORM\Id]

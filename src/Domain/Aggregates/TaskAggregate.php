@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Entity;
+namespace App\Domain\Aggregates;
 
 use App\Domain\Enums\TaskStatusEnum;
 use App\Repository\TaskAggregateRepository;
@@ -8,6 +8,7 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: TaskAggregateRepository::class)]
+#[ORM\Table(name: 'tasks')]
 class TaskAggregate
 {
     #[ORM\Id]
