@@ -3,7 +3,7 @@
 namespace App\Domain\Aggregates;
 
 use App\Domain\Enums\TaskStatusEnum;
-use App\Repository\TaskAggregateRepository;
+use App\Infrastructure\Repositories\TaskAggregateRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 

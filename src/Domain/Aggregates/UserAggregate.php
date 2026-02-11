@@ -2,7 +2,7 @@
 
 namespace App\Domain\Aggregates;
 
-use App\Repository\UserAggregateRepository;
+use App\Infrastructure\Repositories\UserAggregateRepository;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: UserAggregateRepository::class)]
