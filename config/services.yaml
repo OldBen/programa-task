@@ -19,5 +19,10 @@ services:
     App\:
         resource: '../src/*'
 
+    # Event Sourcing
+    App\Infrastructure\EventDispatcher\EventDispatcher:
+        arguments:
+            $eventBus: '@messenger.bus.default'
+
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones

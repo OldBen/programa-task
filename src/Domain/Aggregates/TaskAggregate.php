@@ -3,47 +3,142 @@
 namespace App\Domain\Aggregates;
 
 use App\Domain\Enums\TaskStatusEnum;
-use App\Infrastructure\Repositories\TaskAggregateRepository;
-use Doctrine\DBAL\Types\Types;
-use Doctrine\ORM\Mapping as ORM;
+use App\Domain\Events\DomainEvent;
+use App\Domain\Events\TaskCreatedEvent;
+use App\Domain\Events\TaskReassignedEvent;
+use App\Domain\Events\TaskStatusChangedEvent;
 
-#[ORM\Entity(repositoryClass: TaskAggregateRepository::class)]
-#[ORM\Table(name: 'tasks')]
 class TaskAggregate
 {
-    #[ORM\Id]
-    #[ORM\GeneratedValue]
-    #[ORM\Column]
-    private ?int $id = null;
+    private int $id;
+    private string $name;
+    private ?string $description;
+    private TaskStatusEnum $status;
+    private int $assignedUserId;
+    private int $version = 0;
+    private array $uncommittedEvents = [];
 
-    #[ORM\Column(length: 255)]
-    private ?string $name = null;
+    private function __construct() {}
 
-    #[ORM\Column(type: Types::TEXT, nullable: true)]
-    private ?string $description = null;
+    public static function create(
+        int $id,
+        string $name,
+        ?string $description,
+        int $assignedUserId,
+    ): self {
+        $aggregate = new self();
+        $aggregate->id = $id;
 
-    #[ORM\Column(enumType: TaskStatusEnum::class)]
-    private ?TaskStatusEnum $status = null;
+        $event = new TaskCreatedEvent(
+            $id,
+            $name,
+            $description,
+            $assignedUserId,
+        );
 
-    #[ORM\ManyToOne]
-    #[ORM\JoinColumn(nullable: false)]
-    private ?UserAggregate $assigned_user = null;
+        $aggregate->recordEvent($event);
+        $aggregate->applyEvent($event);
 
-    public function getId(): ?int
+        return $aggregate;
+    }
+
+    public static function fromHistory(array $events): self
+    {
+        $aggregate = new self();
+
+        foreach ($events as $event) {
+            $aggregate->applyEvent($event);
+        }
+
+        return $aggregate;
+    }
+
+    public function changeStatus(TaskStatusEnum $newStatus): void
+    {
+        if ($this->status === $newStatus) {
+            return;
+        }
+
+        $event = new TaskStatusChangedEvent(
+            $this->id,
+            $newStatus,
+        );
+        $this->recordEvent($event);
+        $this->applyEvent($event);
+    }
+
+    public function reassignTo(int $newAssignedUserId): void
+    {
+        if ($this->assignedUserId === $newAssignedUserId) {
+            return;
+        }
+
+        $event = new TaskReassignedEvent(
+            $this->id,
+            $newAssignedUserId,
+        );
+        $this->recordEvent($event);
+        $this->applyEvent($event);
+    }
+
+    private function applyEvent(DomainEvent $event): void
+    {
+        match($event::class) {
+            TaskCreatedEvent::class => $this->applyTaskCreated($event),
+            TaskStatusChangedEvent::class => $this->applyStatusChanged($event),
+            TaskReassignedEvent::class => $this->applyReassigned($event),
+        };
+        $this->version++;
+    }
+
+    private function applyTaskCreated(TaskCreatedEvent $event): void
+    {
+        $this->id = $event->getAggregateId();
+        $this->name = $event->getName();
+        $this->description = $event->getDescription();
+        $this->assignedUserId = $event->getAssignedUserId();
+        $this->status = TaskStatusEnum::TODO;
+    }
+
+    private function applyStatusChanged(TaskStatusChangedEvent $event): void
+    {
+        $this->status = $event->getStatus();
+    }
+
+    private function applyReassigned(TaskReassignedEvent $event): void
+    {
+        $this->assignedUserId = $event->getNewAssignedUserId();
+    }
+
+    private function recordEvent(DomainEvent $event): void
+    {
+        $this->uncommittedEvents[] = $event;
+    }
+
+    public function getUncommittedEvents(): array
+    {
+        return $this->uncommittedEvents;
+    }
+
+    public function clearUncommittedEvents(): void
+    {
+        $this->uncommittedEvents = [];
+    }
+
+    public function getVersion(): int
+    {
+        return $this->version;
+    }
+
+    // Getters
+    public function getId(): int
     {
         return $this->id;
     }
 
-    public function getName(): ?string
+    public function getName(): string
     {
         return $this->name;
-    }
-
-    public function setName(string $name): static
-    {
-        $this->name = $name;
-
-        return $this;
     }
 
     public function getDescription(): ?string
@@ -51,34 +146,13 @@ class TaskAggregate
         return $this->description;
     }
 
-    public function setDescription(?string $description): static
-    {
-        $this->description = $description;
-
-        return $this;
-    }
-
-    public function getStatus(): ?TaskStatusEnum
+    public function getStatus(): TaskStatusEnum
     {
         return $this->status;
     }
 
-    public function setStatus(TaskStatusEnum $status): static
+    public function getAssignedUserId(): int
     {
-        $this->status = $status;
-
-        return $this;
-    }
-
-    public function getAssignedUser(): ?UserAggregate
-    {
-        return $this->assigned_user;
-    }
-
-    public function setAssignedUser(?UserAggregate $assigned_user): static
-    {
-        $this->assigned_user = $assigned_user;
-
-        return $this;
+        return $this->assignedUserId;
     }
 }

@@ -19,7 +19,13 @@ doctrine:
                 is_bundle: false
                 dir: '%kernel.project_dir%/src/Domain/Aggregates'
                 prefix: 'App\Domain\Aggregates'
-                alias: AAggregatesp
+                alias: Aggregates
+            Events:
+                type: attribute
+                is_bundle: false
+                dir: '%kernel.project_dir%/src/Domain/Events'
+                prefix: 'App\Domain\Events'
+                alias: Events
         controller_resolver:
             auto_mapping: false
 
